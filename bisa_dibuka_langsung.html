@@ -1,0 +1,1869 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ESL Season — Liga Bola Kertas</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .is-spectator .admin-strict-only { display: none !important; }
+    .is-admin .spectator-only { display: none !important; }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 antialiased min-h-screen p-4 md:p-6 is-spectator">
+
+  <!-- Header -->
+  <header class="max-w-6xl mx-auto mb-6 bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white text-2xl shadow-md">
+          🏆
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 id="tournament-title-display" class="text-xl md:text-2xl font-bold tracking-tight text-white">ESL Season 15</h1>
+            <!-- Badges -->
+            <span id="badge-spectator" class="spectator-only text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20 font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1">
+              <i class="fa-solid fa-eye"></i> Mode Penonton
+            </span>
+            <span id="badge-admin" class="admin-strict-only text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
+              <i class="fa-solid fa-shield-halved"></i> Mode Admin (Aktif)
+            </span>
+          </div>
+          <p class="text-xs md:text-sm text-slate-400">Klasemen, Hasil Pertandingan, Top Skor & Rulebook Resmi ESL</p>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <!-- Buttons visible to everyone (Clicking triggers Admin PIN popup if not logged in) -->
+        <button onclick="requireAdmin(() => openPasteModal())" class="px-3.5 py-2 text-xs md:text-sm font-bold rounded-lg bg-violet-600 hover:bg-violet-700 text-white shadow transition flex items-center gap-2">
+          <i class="fa-solid fa-clipboard"></i> Paste Hasil
+        </button>
+        <button onclick="requireAdmin(() => openCreateTournamentModal())" class="px-3.5 py-2 text-xs md:text-sm font-bold rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow transition flex items-center gap-2">
+          <i class="fa-solid fa-plus-circle"></i> Season Baru
+        </button>
+        <button onclick="requireAdmin(() => openAddTeamModal())" class="px-3.5 py-2 text-xs md:text-sm font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow transition flex items-center gap-2">
+          <i class="fa-solid fa-users-plus"></i> Tambah Tim
+        </button>
+        <button onclick="requireAdmin(() => openConfigRulesModal())" class="px-3 py-2 text-xs md:text-sm font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow transition flex items-center gap-2">
+          <i class="fa-solid fa-sliders"></i> Aturan Slot
+        </button>
+
+        <!-- Admin Only Actions -->
+        <button onclick="syncToCloud()" class="admin-strict-only px-3 py-2 text-xs md:text-sm font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow transition flex items-center gap-1.5">
+          <i class="fa-solid fa-cloud-arrow-up"></i> Sync Online
+        </button>
+        <button onclick="logoutAdmin()" class="admin-strict-only px-3 py-2 text-xs md:text-sm font-semibold rounded-lg bg-rose-600/20 text-rose-300 border border-rose-500/30 hover:bg-rose-600/30 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-right-from-bracket"></i> Logout Admin
+        </button>
+
+        <!-- Login Admin Button for Spectators -->
+        <button onclick="openLoginAdminModal()" class="spectator-only px-3 py-2 text-xs md:text-sm font-bold rounded-lg bg-slate-700 hover:bg-slate-600 text-amber-400 border border-amber-500/30 shadow transition flex items-center gap-1.5">
+          <i class="fa-solid fa-key"></i> Login Admin
+        </button>
+
+        <!-- Shared Buttons -->
+        <button onclick="openArchivesModal()" class="px-3 py-2 text-xs md:text-sm font-semibold rounded-lg bg-slate-700 hover:bg-slate-600 text-white shadow transition flex items-center gap-2">
+          <i class="fa-solid fa-box-archive text-amber-400"></i> Arsip Season
+        </button>
+      </div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <nav class="flex overflow-x-auto gap-2 mt-6 border-b border-slate-700 pb-2 text-sm font-medium">
+      <button onclick="switchTab('matches')" id="tab-btn-matches" class="tab-btn px-4 py-2 rounded-lg flex items-center gap-2 transition-all">
+        <i class="fa-solid fa-calendar-days"></i> Jadwal & Input Skor
+      </button>
+      <button onclick="switchTab('standings')" id="tab-btn-standings" class="tab-btn px-4 py-2 rounded-lg flex items-center gap-2 transition-all">
+        <i class="fa-solid fa-list-ol"></i> Klasemen & Promosi/Degradasi
+      </button>
+      <button onclick="switchTab('scorers')" id="tab-btn-scorers" class="tab-btn px-4 py-2 rounded-lg flex items-center gap-2 transition-all">
+        <i class="fa-solid fa-football"></i> Top Skor
+      </button>
+      <button onclick="switchTab('teams')" id="tab-btn-teams" class="tab-btn px-4 py-2 rounded-lg flex items-center gap-2 transition-all">
+        <i class="fa-solid fa-users"></i> Tim & Roster
+      </button>
+      <button onclick="switchTab('rules')" id="tab-btn-rules" class="tab-btn px-4 py-2 rounded-lg flex items-center gap-2 transition-all">
+        <i class="fa-solid fa-book"></i> Peraturan ESL
+      </button>
+    </nav>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-6xl mx-auto space-y-6">
+
+    <!-- TAB: JADWAL & INPUT SKOR -->
+    <section id="tab-matches" class="tab-content hidden">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+        <div>
+          <h2 class="text-lg font-semibold text-white">Jadwal Pertandingan</h2>
+          <p class="text-xs text-slate-400">Daftar pertandingan dan hasil skor terbaru.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <select id="match-division-filter" onchange="renderMatches()" class="px-3 py-2 text-xs font-semibold rounded-lg border border-slate-700 bg-slate-800 text-white outline-none">
+            <option value="all">Semua Divisi</option>
+            <option value="Liga 1">Liga 1</option>
+            <option value="Liga 2">Liga 2</option>
+          </select>
+          <button onclick="requireAdmin(() => openAddMatchModal())" class="px-3 py-2 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow transition flex items-center gap-1.5">
+            <i class="fa-solid fa-plus"></i> Tambah Laga Manual
+          </button>
+          <button onclick="requireAdmin(() => generateRoundRobin())" class="px-3 py-2 text-xs bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 rounded-lg font-medium border border-indigo-500/20 transition flex items-center gap-1.5">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Jadwal Otomatis
+          </button>
+        </div>
+      </div>
+
+      <div id="matches-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      </div>
+    </section>
+
+    <!-- TAB: KLASEMEN -->
+    <section id="tab-standings" class="tab-content hidden">
+      <div class="space-y-6">
+        <!-- Liga 1 -->
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow">
+          <div class="flex justify-between items-center mb-4">
+            <div>
+              <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+                <i class="fa-solid fa-trophy text-amber-400"></i> Klasemen Liga 1
+              </h2>
+              <p id="liga1-rules-hint" class="text-xs text-slate-400">Status Promosi / Degradasi diatur secara fleksibel.</p>
+            </div>
+            <button onclick="requireAdmin(() => openConfigRulesModal())" class="text-xs bg-indigo-500/10 text-indigo-400 font-semibold px-2.5 py-1 rounded-full border border-indigo-500/20 hover:bg-indigo-500/20">
+              <i class="fa-solid fa-gear"></i> Ubah Aturan Slot
+            </button>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr class="border-b border-slate-700 text-slate-400 text-xs uppercase tracking-wider bg-slate-900/40">
+                  <th class="p-3 text-center w-12">#</th>
+                  <th class="p-3">Tim</th>
+                  <th class="p-3 text-center">P</th>
+                  <th class="p-3 text-center text-emerald-400">M</th>
+                  <th class="p-3 text-center text-amber-400">S</th>
+                  <th class="p-3 text-center text-rose-400">K</th>
+                  <th class="p-3 text-center">GM</th>
+                  <th class="p-3 text-center">GK</th>
+                  <th class="p-3 text-center">SG</th>
+                  <th class="p-3 text-center font-bold text-blue-400">PTS</th>
+                  <th class="p-3 text-center">Status Peringkat</th>
+                </tr>
+              </thead>
+              <tbody id="standings-liga1-tbody" class="divide-y divide-slate-700/60">
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Liga 2 -->
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow">
+          <div class="flex justify-between items-center mb-4">
+            <div>
+              <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+                <i class="fa-solid fa-medal text-slate-400"></i> Klasemen Liga 2
+              </h2>
+              <p id="liga2-rules-hint" class="text-xs text-slate-400">Jumlah Tim di Liga 2 fleksibel (dapat ditambah tanpa batas).</p>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr class="border-b border-slate-700 text-slate-400 text-xs uppercase tracking-wider bg-slate-900/40">
+                  <th class="p-3 text-center w-12">#</th>
+                  <th class="p-3">Tim</th>
+                  <th class="p-3 text-center">P</th>
+                  <th class="p-3 text-center text-emerald-400">M</th>
+                  <th class="p-3 text-center text-amber-400">S</th>
+                  <th class="p-3 text-center text-rose-400">K</th>
+                  <th class="p-3 text-center">GM</th>
+                  <th class="p-3 text-center">GK</th>
+                  <th class="p-3 text-center">SG</th>
+                  <th class="p-3 text-center font-bold text-blue-400">PTS</th>
+                  <th class="p-3 text-center">Status Peringkat</th>
+                </tr>
+              </thead>
+              <tbody id="standings-liga2-tbody" class="divide-y divide-slate-700/60">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB: TOP SKOR -->
+    <section id="tab-scorers" class="tab-content hidden">
+      <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow">
+        <h2 class="text-lg font-semibold text-white flex items-center gap-2 mb-4">
+          <i class="fa-solid fa-star text-amber-400"></i> Daftar Top Skor
+        </h2>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr class="border-b border-slate-700 text-slate-400 text-xs uppercase tracking-wider bg-slate-900/40">
+                <th class="p-3 text-center w-12">Rank</th>
+                <th class="p-3">Pemain</th>
+                <th class="p-3">Tim</th>
+                <th class="p-3 text-center font-bold text-emerald-400">Total Gol</th>
+                <th class="p-3">Detail Menit & Jenis Gol</th>
+              </tr>
+            </thead>
+            <tbody id="scorers-tbody" class="divide-y divide-slate-700/60">
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB: TIM & ROSTER -->
+    <section id="tab-teams" class="tab-content hidden">
+      <div class="flex justify-between items-center mb-4">
+        <div>
+          <h2 class="text-lg font-semibold text-white">Daftar Tim & Divisi</h2>
+          <p class="text-xs text-slate-400">Kelola klub, pindahkan divisi, atau tambah klub baru tanpa batas.</p>
+        </div>
+        <button onclick="requireAdmin(() => openAddTeamModal())" class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow transition flex items-center gap-2">
+          <i class="fa-solid fa-plus"></i> Tambah Tim Baru
+        </button>
+      </div>
+
+      <div id="teams-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+      </div>
+    </section>
+
+    <!-- TAB: PERATURAN ESL -->
+    <section id="tab-rules" class="tab-content hidden">
+      <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow space-y-6">
+        <div class="border-b border-slate-700 pb-4">
+          <h2 class="text-xl font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-book-bookmark text-red-400"></i> Buku Peraturan Resmi ESL — Liga Bola Kertas
+          </h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+          <div class="p-4 rounded-xl border border-slate-700 bg-slate-900/50 space-y-2">
+            <h3 class="font-bold text-amber-400 flex items-center gap-2">
+              <i class="fa-solid fa-vector-square"></i> Lapangan & Tepuk Bola
+            </h3>
+            <ul class="list-disc list-inside text-xs text-slate-300 space-y-1">
+              <li><b>Ukuran Lapangan:</b> 2 × 2 ubin lantai dengan titik "+".</li>
+              <li><b>Cara Memainkan:</b> Pemain dimainkan dengan <b>ditepuk / ditap</b>, ditendang, atau dioper seperti futsal.</li>
+              <li><b>Jumlah Pemain:</b> Maksimal 5 pemain dalam satu tim.</li>
+            </ul>
+          </div>
+
+          <div class="p-4 rounded-xl border border-slate-700 bg-slate-900/50 space-y-2">
+            <h3 class="font-bold text-red-400 flex items-center gap-2">
+              <i class="fa-solid fa-crosshairs"></i> Aturan Menembak (Shooting)
+            </h3>
+            <ul class="list-disc list-inside text-xs text-slate-300 space-y-1">
+              <li>Setiap tim mempunyai <b>area 1 × 1</b> milik sendiri.</li>
+              <li>Pemain <b>HANYA boleh menembak</b> dari area 1 × 1 miliknya sendiri.</li>
+              <li>🚫 Dilarang menembak dari area 1 × 1 milik lawan!</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- MODAL: LOGIN ADMIN -->
+  <div id="modal-login-admin" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-800 text-white border border-slate-700 rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center pb-3 border-b border-slate-700">
+        <div>
+          <h3 class="font-bold text-lg flex items-center gap-2 text-amber-400"><i class="fa-solid fa-lock"></i> Akses Admin Diperlukan</h3>
+          <p class="text-xs text-slate-400 mt-1">Masukkan PIN Admin untuk melakukan perubahan ini.</p>
+        </div>
+        <button onclick="closeLoginAdminModal()" class="text-slate-400 hover:text-white text-lg">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form onsubmit="submitLoginAdmin(event)" class="space-y-4">
+        <div>
+          <input type="password" id="input-admin-pin" placeholder="Masukkan PIN Admin" required class="w-full p-3 rounded-lg border border-slate-700 bg-slate-900 text-white text-center text-lg font-mono tracking-widest outline-none">
+        </div>
+
+        <div class="flex gap-2 pt-2">
+          <button type="button" onclick="closeLoginAdminModal()" class="flex-1 py-2.5 text-sm font-medium rounded-lg border border-slate-700 hover:bg-slate-700">Batal</button>
+          <button type="submit" class="flex-1 py-2.5 text-sm font-medium rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold">Masuk Admin</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: PENGATURAN ATURAN PROMOSI & DEGRADASI -->
+  <div id="modal-config-rules" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-800 text-white border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center pb-3 border-b border-slate-700">
+        <h3 class="font-bold text-lg">Pengaturan Promosi & Degradasi</h3>
+        <button onclick="closeConfigRulesModal()" class="text-slate-400 hover:text-white text-lg">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form onsubmit="saveDivisionRules(event)" class="space-y-4">
+        <div class="p-3 bg-slate-900/60 rounded-xl space-y-3 border border-slate-700">
+          <h4 class="font-bold text-sm text-amber-400">Aturan Liga 1</h4>
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1">Jumlah Tim Terbawah yang Degradasi ke Liga 2</label>
+            <input type="number" id="rule-liga1-deg" min="0" max="10" value="1" required class="w-full p-2.5 rounded-lg border border-slate-700 bg-slate-800 text-white text-sm outline-none">
+            <p class="text-[10px] text-slate-400 mt-1">Isi <b>0</b> jika musim ini <b>Tanpa Degradasi</b>.</p>
+          </div>
+        </div>
+
+        <div class="p-3 bg-slate-900/60 rounded-xl space-y-3 border border-slate-700">
+          <h4 class="font-bold text-sm text-emerald-400">Aturan Liga 2</h4>
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1">Jumlah Tim Teratas yang Promosi ke Liga 1</label>
+            <input type="number" id="rule-liga2-prom" min="0" max="10" value="1" required class="w-full p-2.5 rounded-lg border border-slate-700 bg-slate-800 text-white text-sm outline-none">
+          </div>
+        </div>
+
+        <div class="p-3 bg-slate-900/60 rounded-xl space-y-2 border border-slate-700">
+          <h4 class="font-bold text-sm text-violet-400">Ubah PIN Admin</h4>
+          <div>
+            <input type="password" id="rule-new-pin" placeholder="PIN Baru (opsional)" class="w-full p-2.5 rounded-lg border border-slate-700 bg-slate-800 text-white text-sm outline-none">
+          </div>
+        </div>
+
+        <div class="flex gap-2 pt-2">
+          <button type="button" onclick="closeConfigRulesModal()" class="flex-1 py-2.5 text-sm font-medium rounded-lg border border-slate-700 hover:bg-slate-700">Batal</button>
+          <button type="submit" class="flex-1 py-2.5 text-sm font-medium rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white">Simpan Aturan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: BUAT TURNAMEN / SEASON BARU -->
+  <div id="modal-create-tournament" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-800 text-white border border-slate-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center pb-3 border-b border-slate-700">
+        <h3 class="font-bold text-lg">Mulai Season Baru</h3>
+        <button onclick="closeCreateTournamentModal()" class="text-slate-400 hover:text-white text-lg">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form onsubmit="saveCustomTournament(event)" class="space-y-4">
+        <div class="p-3 bg-slate-900/60 border border-slate-700 rounded-xl space-y-2">
+          <label class="block text-xs font-semibold text-amber-400">Nomor Season</label>
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-bold text-slate-400">ESL Season</span>
+            <input type="number" id="custom-season-num" min="1" max="999" value="16" required class="w-24 p-2.5 rounded-lg border border-slate-700 bg-slate-800 text-white text-sm font-bold text-center outline-none">
+          </div>
+          <p class="text-[11px] text-slate-400">Nama turnamen otomatis: <b id="season-name-preview" class="text-white">ESL Season 16</b></p>
+        </div>
+
+        <div class="p-3 bg-slate-900/40 border border-slate-700 rounded-xl space-y-2">
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-semibold text-white">Opsi Tim Season Baru</label>
+          </div>
+          <div class="space-y-2 text-xs">
+            <label class="flex items-center gap-2 text-slate-300 cursor-pointer">
+              <input type="radio" name="team-mode" value="keep" checked onchange="toggleTeamModeControls()">
+              <span>Gunakan Tim yang Ada (Hasil Pertandingan & Skor Direset)</span>
+            </label>
+            <label class="flex items-center gap-2 text-slate-300 cursor-pointer">
+              <input type="radio" name="team-mode" value="fresh" onchange="toggleTeamModeControls()">
+              <span>Buat Tim Baru dengan Jumlah Kustom</span>
+            </label>
+          </div>
+        </div>
+
+        <div id="fresh-team-controls" class="space-y-4 hidden">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1">Jumlah Tim Liga 1</label>
+              <input type="number" id="custom-liga1-count" min="0" max="20" value="4" class="w-full p-2.5 rounded-lg border border-slate-700 bg-slate-900 text-white text-sm outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1">Jumlah Tim Liga 2</label>
+              <input type="number" id="custom-liga2-count" min="0" max="20" value="3" class="w-full p-2.5 rounded-lg border border-slate-700 bg-slate-900 text-white text-sm outline-none">
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1">Slot Degradasi Liga 1</label>
+            <input type="number" id="custom-liga1-deg" min="0" max="5" value="1" required class="w-full p-2.5 rounded-lg border border-slate-700 bg-slate-900 text-white text-sm outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1">Slot Promosi Liga 2</label>
+            <input type="number" id="custom-liga2-prom" min="0" max="5" value="1" required class="w-full p-2.5 rounded-lg border border-slate-700 bg-slate-900 text-white text-sm outline-none">
+          </div>
+        </div>
+
+        <div class="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-300 flex items-start gap-2">
+          <i class="fa-solid fa-box-archive mt-0.5 text-base"></i>
+          <div>
+            <b>Otomatis Arsip:</b> Season aktif saat ini akan tersimpan di <b>Arsip Season</b> sehingga kamu bisa melihat kembali sejarah & klasemen lamanya kapan saja.
+          </div>
+        </div>
+
+        <div class="flex gap-2 pt-2">
+          <button type="button" onclick="closeCreateTournamentModal()" class="flex-1 py-2.5 text-sm font-medium rounded-lg border border-slate-700 hover:bg-slate-700">Batal</button>
+          <button type="submit" class="flex-1 py-2.5 text-sm font-medium rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold">Mulai Season Baru</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ARSIP SEASON -->
+  <div id="modal-archives" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-800 text-white border border-slate-700 rounded-2xl max-w-2xl w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto space-y-4">
+      <div class="flex justify-between items-center pb-3 border-b border-slate-700">
+        <div>
+          <h3 class="font-bold text-lg flex items-center gap-2"><i class="fa-solid fa-box-archive text-amber-400"></i> Arsip Season ESL</h3>
+          <p class="text-xs text-slate-400">Daftar season yang pernah dimainkan sebelumnya.</p>
+        </div>
+        <button onclick="closeArchivesModal()" class="text-slate-400 hover:text-white text-lg">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div id="archives-list-container" class="space-y-3">
+      </div>
+
+      <div class="pt-2">
+        <button type="button" onclick="closeArchivesModal()" class="w-full py-2.5 text-sm font-medium rounded-lg border border-slate-700 hover:bg-slate-700">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: INPUT SKOR -->
+  <div id="modal-match-input" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-800 text-white border border-slate-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center pb-4 border-b border-slate-700">
+        <div>
+          <h3 class="font-bold text-lg">Input Hasil & Detail Gol</h3>
+          <span id="modal-match-div" class="text-xs text-slate-400">Liga 1</span>
+        </div>
+        <button onclick="closeMatchModal()" class="text-slate-400 hover:text-white text-lg">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="form-match-result" onsubmit="saveMatchResult(event)" class="mt-4 space-y-5">
+        <input type="hidden" id="match-input-id">
+
+        <div class="bg-slate-900/60 border border-slate-700 p-4 rounded-xl flex items-center justify-between gap-4">
+          <div class="flex-1 text-center">
+            <span id="match-home-name" class="font-bold block text-sm mb-1">Home</span>
+            <input type="number" id="match-home-score" min="0" required class="w-16 h-12 text-center text-xl font-bold rounded-lg border border-slate-700 bg-slate-800 text-white outline-none">
+          </div>
+          <span class="text-xl font-black text-slate-500">VS</span>
+          <div class="flex-1 text-center">
+            <span id="match-away-name" class="font-bold block text-sm mb-1">Away</span>
+            <input type="number" id="match-away-score" min="0" required class="w-16 h-12 text-center text-xl font-bold rounded-lg border border-slate-700 bg-slate-800 text-white outline-none">
+          </div>
+        </div>
+
+        <div>
+          <div class="flex justify-between items-center mb-2">
+            <label class="text-xs font-semibold uppercase text-slate-400">Goal Logs</label>
+            <button type="button" onclick="addGoalRow()" class="text-xs bg-blue-500/10 text-blue-400 px-2.5 py-1 rounded font-medium flex items-center gap-1">
+              <i class="fa-solid fa-plus"></i> Tambah Gol
+            </button>
+          </div>
+          <div id="goals-list-container" class="space-y-2"></div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Status Pertandingan</label>
+          <select id="match-status-select" class="w-full p-2.5 rounded-lg border border-slate-700 bg-slate-900 text-white text-sm outline-none">
+            <option value="finished">Selesai (Update Klasemen & Top Skor)</option>
+            <option value="upcoming">Belum Selesai</option>
+          </select>
+        </div>
+
+        <div class="flex gap-2 pt-2">
+          <button type="button" onclick="closeMatchModal()" class="flex-1 py-2.5 text-sm font-medium rounded-lg border border-slate-700 hover:bg-slate-700">Batal</button>
+          <button type="submit" class="flex-1 py-2.5 text-sm font-medium rounded-lg bg-blue-600 hover:bg-blue-700 text-white">Simpan Hasil</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: TAMBAH LAGA MANUAL -->
+  <div id="modal-add-match" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-800 text-white border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+      <div class="flex justify-between items-center pb-4 border-b border-slate-700">
+        <h3 class="font-bold text-lg">Tambah Laga Manual</h3>
+        <button onclick="closeAddMatchModal()" class="text-slate-400 hover:text-white text-lg">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form onsubmit="saveNewMatch(event)" class="mt-4 space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Divisi</label>
+          <select id="new-match-division" class="w-full p-2.5 rounded-lg border border-slate-700 bg-slate-900 text-white text-sm outline-none">
+            <option value="Liga 1">Liga 1</option>
+            <option value="Liga 2">Liga 2</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Tim Kandang</label>
+          <select id="new-match-home" required class="w-full p-2.5 rounded-lg border border-slate-700 bg-slate-900 text-white text-sm outline-none"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Tim Tandang</label>
+          <select id="new-match-away" required class="w-full p-2.5 rounded-lg border border-slate-700 bg-slate-900 text-white text-sm outline-none"></select>
+        </div>
+
+        <div class="flex gap-2 pt-2">
+          <button type="button" onclick="closeAddMatchModal()" class="flex-1 py-2.5 text-sm font-medium rounded-lg border border-slate-700 hover:bg-slate-700">Batal</button>
+          <button type="submit" class="flex-1 py-2.5 text-sm font-medium rounded-lg bg-blue-600 hover:bg-blue-700 text-white">Buat Jadwal</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: TAMBAH KLUB -->
+  <div id="modal-add-team" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-800 text-white border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+      <div class="flex justify-between items-center pb-4 border-b border-slate-700">
+        <h3 class="font-bold text-lg">Tambah Tim Baru</h3>
+        <button onclick="closeAddTeamModal()" class="text-slate-400 hover:text-white text-lg">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form onsubmit="saveNewTeam(event)" class="mt-4 space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Nama Tim</label>
+          <input type="text" id="new-team-name" placeholder="Misal: Emberlord FC" required class="w-full p-2.5 rounded-lg border border-slate-700 bg-slate-900 text-white text-sm outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Divisi</label>
+          <select id="new-team-division" class="w-full p-2.5 rounded-lg border border-slate-700 bg-slate-900 text-white text-sm outline-none">
+            <option value="Liga 1">Liga 1</option>
+            <option value="Liga 2">Liga 2</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Logo (Emoji / Symbol)</label>
+          <input type="text" id="new-team-logo" value="⚽" required class="w-full p-2.5 rounded-lg border border-slate-700 bg-slate-900 text-white text-sm outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Daftar Pemain (Pisahkan dengan koma)</label>
+          <textarea id="new-team-players" placeholder="Ahmad, Budi, Charlie" rows="2" class="w-full p-2.5 rounded-lg border border-slate-700 bg-slate-900 text-white text-sm outline-none"></textarea>
+        </div>
+
+        <div class="flex gap-2 pt-2">
+          <button type="button" onclick="closeAddTeamModal()" class="flex-1 py-2.5 text-sm font-medium rounded-lg border border-slate-700 hover:bg-slate-700">Batal</button>
+          <button type="submit" class="flex-1 py-2.5 text-sm font-medium rounded-lg bg-blue-600 hover:bg-blue-700 text-white">Simpan Tim</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: PASTE HASIL PERTANDINGAN -->
+  <div id="modal-paste" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-800 text-white border border-slate-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center pb-4 border-b border-slate-700">
+        <div>
+          <h3 class="font-bold text-lg flex items-center gap-2"><i class="fa-solid fa-clipboard text-violet-400"></i> Paste Hasil Pertandingan</h3>
+          <p class="text-xs text-slate-400 mt-1">Ketik/paste hasil laga, otomatis masuk ke sistem!</p>
+        </div>
+        <button onclick="closePasteModal()" class="text-slate-400 hover:text-white text-lg">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="mt-4 space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Divisi Pertandingan</label>
+          <select id="paste-division" class="w-full p-2.5 rounded-lg border border-slate-700 bg-slate-900 text-white text-sm outline-none">
+            <option value="Liga 1">Liga 1</option>
+            <option value="Liga 2">Liga 2</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-2">Teks Hasil Pertandingan</label>
+          <textarea id="paste-text-input" rows="8" placeholder="Contoh:
+Ces ferrol 11-3 seattle rounders
+Ikhwandowski 1,1,3,4,5,7,7,8 cf
+Ryu 9,9 cf
+Marzinho 3(p),6(p),7 sr
+
+Format:
+Baris 1: [Tim Home] [skor]-[skor] [Tim Away]
+Baris 2+: [Pemain] [menit](p/og/fk) [inisial tim]" class="w-full p-3 rounded-lg border border-slate-700 bg-slate-900 text-white text-sm outline-none font-mono leading-relaxed"></textarea>
+        </div>
+
+        <!-- Preview Area -->
+        <div id="paste-preview" class="hidden">
+          <label class="block text-xs font-semibold text-slate-400 mb-2">📋 Preview Hasil Parsing</label>
+          <div id="paste-preview-content" class="bg-slate-900/60 border border-slate-700 rounded-xl p-4 text-sm space-y-2"></div>
+        </div>
+
+        <div class="flex gap-2 pt-2">
+          <button type="button" onclick="previewPaste()" class="flex-1 py-2.5 text-sm font-medium rounded-lg bg-amber-600 hover:bg-amber-700 text-white flex items-center justify-center gap-2">
+            <i class="fa-solid fa-eye"></i> Preview
+          </button>
+          <button type="button" onclick="submitPaste()" class="flex-1 py-2.5 text-sm font-medium rounded-lg bg-violet-600 hover:bg-violet-700 text-white flex items-center justify-center gap-2">
+            <i class="fa-solid fa-check"></i> Simpan ke Sistem
+          </button>
+        </div>
+        <button type="button" onclick="closePasteModal()" class="w-full py-2 text-sm font-medium rounded-lg border border-slate-700 hover:bg-slate-700 text-slate-400">Batal</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const totallyEmptyState = {
+      seasonNum: 15,
+      tournamentName: "ESL Season 15",
+      adminPin: "1234",
+      cloudSyncId: null,
+      rules: {
+        liga1DegradationSlots: 1,
+        liga2PromotionSlots: 1
+      },
+      teams: [],   
+      matches: []  
+    };
+
+    let appState = loadState();
+    let archivesState = loadArchives();
+    let isAdmin = sessionStorage.getItem('esl_is_admin') === 'true';
+    let pendingAdminAction = null;
+
+    function requireAdmin(actionCallback) {
+      if (isAdmin) {
+        actionCallback();
+      } else {
+        pendingAdminAction = actionCallback;
+        openLoginAdminModal();
+      }
+    }
+
+    function checkAdminStateUI() {
+      if (isAdmin) {
+        document.body.classList.add('is-admin');
+        document.body.classList.remove('is-spectator');
+      } else {
+        document.body.classList.remove('is-admin');
+        document.body.classList.add('is-spectator');
+      }
+    }
+
+    function openLoginAdminModal() {
+      document.getElementById('input-admin-pin').value = '';
+      document.getElementById('modal-login-admin').classList.remove('hidden');
+    }
+    function closeLoginAdminModal() {
+      document.getElementById('modal-login-admin').classList.add('hidden');
+    }
+
+    function submitLoginAdmin(e) {
+      e.preventDefault();
+      const inputPin = document.getElementById('input-admin-pin').value.trim();
+      const targetPin = appState.adminPin || "1234";
+
+      if (inputPin === targetPin) {
+        isAdmin = true;
+        sessionStorage.setItem('esl_is_admin', 'true');
+        checkAdminStateUI();
+        closeLoginAdminModal();
+        renderAll();
+
+        if (pendingAdminAction) {
+          const cb = pendingAdminAction;
+          pendingAdminAction = null;
+          cb();
+        } else {
+          alert("⚡ Mode Admin berhasil diaktifkan!");
+        }
+      } else {
+        alert("❌ PIN Salah! Silakan coba lagi.");
+      }
+    }
+
+    function logoutAdmin() {
+      isAdmin = false;
+      sessionStorage.setItem('esl_is_admin', 'false');
+      checkAdminStateUI();
+      renderAll();
+      alert("👁️ Keluar dari Mode Admin. Sekarang dalam Mode Penonton.");
+    }
+
+    // Cloud Sync API (using JSONBlob)
+    async function syncToCloud() {
+      if (!isAdmin) return;
+
+      try {
+        const payload = JSON.stringify(appState);
+        let cloudId = appState.cloudSyncId;
+        let url = 'https://jsonblob.com/api/jsonBlob';
+        let method = 'POST';
+
+        if (cloudId) {
+          url = `https://jsonblob.com/api/jsonBlob/${cloudId}`;
+          method = 'PUT';
+        }
+
+        const res = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: payload
+        });
+
+        if (method === 'POST') {
+          const loc = res.headers.get('Location');
+          if (loc) {
+            cloudId = loc.split('/').pop();
+          } else {
+            const data = await res.json();
+            cloudId = data.id || loc;
+          }
+          appState.cloudSyncId = cloudId;
+          saveState();
+        }
+
+        alert(`✅ Data berhasil di-sync ke Cloud! Penonton otomatis dapat melihat klasemen & hasil terbaru.`);
+      } catch(err) {
+        alert(`⚠️ Gagal menyambung ke server cloud. Pastikan terkoneksi ke internet.`);
+      }
+    }
+
+    async function loadFromCloudIfAvailable() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const cloudId = appState.cloudSyncId || urlParams.get('syncId');
+      if (!cloudId) return;
+
+      try {
+        const res = await fetch(`https://jsonblob.com/api/jsonBlob/${cloudId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.teams) {
+            const currentPin = appState.adminPin || "1234";
+            appState = data;
+            appState.adminPin = currentPin;
+            appState.cloudSyncId = cloudId;
+            localStorage.setItem('esl_100percent_empty_state', JSON.stringify(appState));
+            renderAll();
+          }
+        }
+      } catch(e) {}
+    }
+
+    function loadState() {
+      const saved = localStorage.getItem('esl_100percent_empty_state');
+      if (saved) {
+        try { return JSON.parse(saved); } catch(e){}
+      }
+      return JSON.parse(JSON.stringify(totallyEmptyState));
+    }
+
+    function saveState() {
+      localStorage.setItem('esl_100percent_empty_state', JSON.stringify(appState));
+      renderAll();
+    }
+
+    function loadArchives() {
+      const saved = localStorage.getItem('esl_season_archives');
+      if (saved) {
+        try { return JSON.parse(saved); } catch(e){}
+      }
+      return [];
+    }
+
+    function saveArchives() {
+      localStorage.setItem('esl_season_archives', JSON.stringify(archivesState));
+    }
+
+    let activeTab = 'matches';
+
+    function switchTab(tabId) {
+      activeTab = tabId;
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('bg-blue-600', 'text-white', 'shadow');
+        btn.classList.add('text-slate-400', 'hover:bg-slate-700');
+      });
+
+      const targetTab = document.getElementById(`tab-${tabId}`);
+      const targetBtn = document.getElementById(`tab-btn-${tabId}`);
+
+      if (targetTab) targetTab.classList.remove('hidden');
+      if (targetBtn) {
+        targetBtn.classList.remove('text-slate-400', 'hover:bg-slate-700');
+        targetBtn.classList.add('bg-blue-600', 'text-white', 'shadow');
+      }
+
+      renderAll();
+    }
+
+    function getTeam(id) {
+      return appState.teams.find(t => t.id === parseInt(id)) || { name: 'Unknown', logo: '⚽', players: [] };
+    }
+
+    function renderAll() {
+      checkAdminStateUI();
+      document.getElementById('tournament-title-display').innerText = appState.tournamentName || `ESL Season ${appState.seasonNum || 15}`;
+
+      const degCount = appState.rules?.liga1DegradationSlots ?? 1;
+      const promCount = appState.rules?.liga2PromotionSlots ?? 1;
+
+      document.getElementById('liga1-rules-hint').innerText = degCount > 0 
+        ? `🔴 Posisi terbawah (${degCount} tim) akan degradasi ke Liga 2.`
+        : `🛡️ Musim ini Tanpa Degradasi (0 slot degradasi).`;
+
+      document.getElementById('liga2-rules-hint').innerText = promCount > 0
+        ? `🟢 Posisi teratas (${promCount} tim) akan promosi ke Liga 1.`
+        : `⚪ Tanpa Slot Promosi musim ini.`;
+
+      if (activeTab === 'matches') renderMatches();
+      else if (activeTab === 'standings') renderStandings();
+      else if (activeTab === 'scorers') renderScorers();
+      else if (activeTab === 'teams') renderTeams();
+    }
+
+    function renderMatches() {
+      const container = document.getElementById('matches-container');
+      container.innerHTML = '';
+      const filterDiv = document.getElementById('match-division-filter').value;
+      const matchesToRender = appState.matches.filter(m => filterDiv === 'all' || m.division === filterDiv);
+
+      if (appState.teams.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full text-center py-16 bg-slate-800 border border-slate-700 rounded-2xl">
+            <i class="fa-solid fa-users text-5xl mb-3 text-slate-500 block"></i>
+            <h3 class="font-bold text-lg text-white">Belum Ada Tim Yang Ditambahkan</h3>
+            <p class="text-xs text-slate-400 mt-1 mb-4">Tambahkan tim terlebih dahulu untuk mulai membuat jadwal pertandingan.</p>
+            <button onclick="requireAdmin(() => openAddTeamModal())" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition inline-flex items-center gap-2">
+              <i class="fa-solid fa-plus"></i> Tambah Tim Pertama Anda
+            </button>
+          </div>
+        `;
+        return;
+      }
+
+      if (matchesToRender.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full text-center py-12 bg-slate-800 border border-slate-700 rounded-2xl text-slate-400">
+            <i class="fa-solid fa-calendar-xmark text-4xl mb-3 block text-slate-500"></i>
+            <p class="text-sm font-semibold text-white">Belum Ada Pertandingan Terjadwal</p>
+            <p class="text-xs text-slate-400 mt-1 mb-4">Belum ada laga di divisi ini.</p>
+            <button onclick="requireAdmin(() => generateRoundRobin())" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition inline-flex items-center gap-2">
+              <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Jadwal Otomatis
+            </button>
+          </div>
+        `;
+        return;
+      }
+
+      matchesToRender.forEach((match, index) => {
+        const home = getTeam(match.homeTeamId);
+        const away = getTeam(match.awayTeamId);
+        const isFinished = match.status === 'finished';
+
+        const card = document.createElement('div');
+        card.className = "bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow flex flex-col justify-between";
+
+        let goalsHtml = '';
+        if (match.goals && match.goals.length > 0) {
+          const sortedGoals = [...match.goals].sort((a, b) => parseMinuteNum(a.minute) - parseMinuteNum(b.minute));
+          goalsHtml = `
+            <div class="mt-4 pt-3 border-t border-slate-700 text-xs space-y-1">
+              <span class="font-semibold text-slate-400 block mb-1">Goal Logs:</span>
+              ${sortedGoals.map(g => {
+                const team = getTeam(g.teamId);
+                const typeLabel = g.type === 'og' ? ' (OG)' : g.type === 'penalty' ? ' (P)' : g.type === 'freekick' ? ' (FK)' : '';
+                return `<div class="flex items-center gap-1 text-slate-300">
+                  <span>⚽</span><span class="font-medium text-white">${g.scorer}${typeLabel}</span>
+                  <span class="text-slate-400">(${team.name})</span>
+                  <span class="ml-auto font-mono text-xs bg-slate-700 px-1.5 py-0.5 rounded">${g.minute ? g.minute + "'" : ''}</span>
+                </div>`;
+              }).join('')}
+            </div>
+          `;
+        }
+
+        card.innerHTML = `
+          <div>
+            <div class="flex justify-between items-center text-xs mb-3">
+              <span class="font-semibold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">${match.division || 'Liga 1'}</span>
+              ${isFinished 
+                ? '<span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium px-2 py-0.5 rounded-full">Selesai</span>'
+                : '<span class="bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium px-2 py-0.5 rounded-full">Jadwal</span>'
+              }
+            </div>
+            <div class="flex items-center justify-between gap-2 py-2">
+              <div class="flex-1 text-center"><span class="text-3xl mb-1 block">${home.logo}</span><span class="font-bold text-sm text-white leading-tight">${home.name}</span></div>
+              <div class="px-4 py-2 bg-slate-900/60 rounded-xl border border-slate-700 flex items-center gap-3">
+                <span class="text-2xl font-black">${isFinished ? match.homeScore : '-'}</span>
+                <span class="text-xs text-slate-500 font-bold">:</span>
+                <span class="text-2xl font-black">${isFinished ? match.awayScore : '-'}</span>
+              </div>
+              <div class="flex-1 text-center"><span class="text-3xl mb-1 block">${away.logo}</span><span class="font-bold text-sm text-white leading-tight">${away.name}</span></div>
+            </div>
+            ${goalsHtml}
+          </div>
+          <div class="mt-4 pt-3 flex gap-2">
+            <button onclick="requireAdmin(() => openMatchModal(${match.id}))" class="flex-1 py-2 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-1">
+              <i class="fa-solid fa-pen-to-square"></i> ${isFinished ? 'Edit Hasil' : 'Input Hasil'}
+            </button>
+            <button onclick="requireAdmin(() => deleteMatch(${match.id}))" class="px-3 py-2 text-xs rounded-lg border border-slate-700 text-red-400 hover:bg-red-500/10"><i class="fa-solid fa-trash"></i></button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function renderStandings() {
+      renderDivisionStandings("Liga 1", "standings-liga1-tbody");
+      renderDivisionStandings("Liga 2", "standings-liga2-tbody");
+    }
+
+    function renderDivisionStandings(divName, tbodyId) {
+      const tbody = document.getElementById(tbodyId);
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      const teamsInDiv = appState.teams.filter(t => (t.division || "Liga 1") === divName);
+      if (teamsInDiv.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="11" class="text-center py-6 text-xs text-slate-400">Belum ada tim di divisi ini.</td></tr>`;
+        return;
+      }
+
+      const map = {};
+      teamsInDiv.forEach(t => {
+        map[t.id] = { teamId: t.id, name: t.name, logo: t.logo, P: 0, M: 0, S: 0, K: 0, GM: 0, GK: 0, SG: 0, PTS: 0 };
+      });
+
+      appState.matches.forEach(m => {
+        if (m.status !== 'finished' || (m.division || "Liga 1") !== divName) return;
+        const home = map[m.homeTeamId];
+        const away = map[m.awayTeamId];
+        if (!home || !away) return;
+
+        home.P += 1; away.P += 1;
+        home.GM += m.homeScore; home.GK += m.awayScore;
+        away.GM += m.awayScore; away.GK += m.homeScore;
+
+        if (m.homeScore > m.awayScore) {
+          home.M += 1; home.PTS += 3; away.K += 1;
+        } else if (m.awayScore > m.homeScore) {
+          away.M += 1; away.PTS += 3; home.K += 1;
+        } else {
+          home.S += 1; home.PTS += 1;
+          away.S += 1; away.PTS += 1;
+        }
+      });
+
+      Object.values(map).forEach(s => s.SG = s.GM - s.GK);
+
+      const sorted = Object.values(map).sort((a, b) => {
+        if (b.PTS !== a.PTS) return b.PTS - a.PTS;
+        if (b.SG !== a.SG) return b.SG - a.SG;
+        return b.GM - a.GM;
+      });
+
+      const degSlots = appState.rules?.liga1DegradationSlots ?? 1;
+      const promSlots = appState.rules?.liga2PromotionSlots ?? 1;
+      const totalTeams = sorted.length;
+
+      sorted.forEach((s, idx) => {
+        let statusTag = '<span class="text-xs text-slate-400">Bertahan</span>';
+
+        if (divName === 'Liga 1') {
+          if (idx === 0) statusTag = '<span class="text-xs bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded font-bold">🥇 Juara Liga 1</span>';
+          else if (degSlots > 0 && idx >= (totalTeams - degSlots)) {
+            statusTag = `<span class="text-xs bg-rose-500/10 text-rose-400 px-2 py-0.5 rounded font-semibold">🔴 Posisi ${idx + 1} (Degradasi)</span>`;
+          }
+        } else if (divName === 'Liga 2') {
+          if (promSlots > 0 && idx < promSlots) {
+            statusTag = `<span class="text-xs bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded font-semibold">🟢 Posisi ${idx + 1} (Promosi ke Liga 1)</span>`;
+          }
+        }
+
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-700/30 transition-colors";
+        tr.innerHTML = `
+          <td class="p-3 text-center font-bold text-xs text-slate-400">${idx + 1}</td>
+          <td class="p-3 font-semibold text-white flex items-center gap-2"><span class="text-xl">${s.logo}</span><span>${s.name}</span></td>
+          <td class="p-3 text-center font-medium">${s.P}</td>
+          <td class="p-3 text-center font-semibold text-emerald-400">${s.M}</td>
+          <td class="p-3 text-center font-semibold text-amber-400">${s.S}</td>
+          <td class="p-3 text-center font-semibold text-rose-400">${s.K}</td>
+          <td class="p-3 text-center text-slate-400">${s.GM}</td>
+          <td class="p-3 text-center text-slate-400">${s.GK}</td>
+          <td class="p-3 text-center font-semibold ${s.SG > 0 ? 'text-emerald-400' : s.SG < 0 ? 'text-rose-400' : ''}">${s.SG > 0 ? '+' + s.SG : s.SG}</td>
+          <td class="p-3 text-center font-black text-blue-400 text-base bg-blue-500/10">${s.PTS}</td>
+          <td class="p-3 text-center">${statusTag}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderScorers() {
+      const tbody = document.getElementById('scorers-tbody');
+      tbody.innerHTML = '';
+      const map = {};
+
+      appState.matches.forEach(m => {
+        if (m.status !== 'finished' || !m.goals) return;
+        m.goals.forEach(g => {
+          if (!g.scorer || !g.scorer.trim()) return;
+          const key = `${g.scorer.trim().toLowerCase()}_${g.teamId}`;
+          if (!map[key]) map[key] = { scorer: g.scorer.trim(), teamId: g.teamId, count: 0, details: [] };
+          map[key].count += 1;
+          const typeStr = g.type === 'og' ? ' (OG)' : g.type === 'penalty' ? ' (PK)' : g.type === 'freekick' ? ' (FK)' : '';
+          map[key].details.push(`${g.minute || 'Goal'}${typeStr}`);
+        });
+      });
+
+      const sorted = Object.values(map).sort((a, b) => b.count - a.count);
+      if (sorted.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-xs text-slate-400">Belum ada pencetak gol tercatat.</td></tr>`;
+        return;
+      }
+
+      sorted.forEach((sc, idx) => {
+        const team = getTeam(sc.teamId);
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-700/30 transition-colors";
+        tr.innerHTML = `
+          <td class="p-3 text-center font-bold text-xs text-slate-400">${idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : idx + 1}</td>
+          <td class="p-3 font-semibold text-white">${sc.scorer}</td>
+          <td class="p-3 flex items-center gap-2 text-xs text-slate-300"><span>${team.logo}</span><span>${team.name}</span></td>
+          <td class="p-3 text-center font-black text-emerald-400 text-base">${sc.count}</td>
+          <td class="p-3">
+            <div class="flex flex-wrap gap-1">
+              ${sc.details.map(d => `<span class="bg-slate-700 border border-slate-600 px-1.5 py-0.5 rounded text-xs font-mono text-slate-200">${d}</span>`).join('')}
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderTeams() {
+      const container = document.getElementById('teams-container');
+      container.innerHTML = '';
+
+      if (appState.teams.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full text-center py-16 bg-slate-800 border border-slate-700 rounded-2xl">
+            <i class="fa-solid fa-folder-open text-4xl mb-3 block text-slate-500"></i>
+            <p class="text-sm font-semibold text-white">Belum Ada Tim Ditambahkan</p>
+            <p class="text-xs text-slate-400 mt-1 mb-4">Tambahkan tim terlebih dahulu untuk mulai membuat liga.</p>
+            <button onclick="requireAdmin(() => openAddTeamModal())" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition inline-flex items-center gap-2">
+              <i class="fa-solid fa-plus"></i> Tambah Tim Pertama
+            </button>
+          </div>
+        `;
+        return;
+      }
+
+      appState.teams.forEach(team => {
+        const card = document.createElement('div');
+        card.className = "bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow space-y-3";
+        card.innerHTML = `
+          <div class="flex justify-between items-start">
+            <div class="flex items-center gap-3">
+              <span class="text-3xl">${team.logo}</span>
+              <div>
+                <h3 class="font-bold text-white text-base leading-tight">${team.name}</h3>
+                <span class="text-xs text-blue-400 font-semibold">${team.division || 'Liga 1'}</span>
+              </div>
+            </div>
+            <button onclick="requireAdmin(() => deleteTeam(${team.id}))" class="text-red-400 hover:text-red-300 text-xs p-1"><i class="fa-solid fa-trash"></i></button>
+          </div>
+
+          <div class="flex items-center gap-2 pt-2 border-t border-slate-700">
+            <span class="text-xs text-slate-400">Pindah Divisi:</span>
+            <select onchange="requireAdmin(() => changeTeamDivision(${team.id}, this.value))" class="text-xs p-1 rounded border border-slate-700 bg-slate-900 text-white">
+              <option value="Liga 1" ${team.division === 'Liga 1' ? 'selected' : ''}>Liga 1</option>
+              <option value="Liga 2" ${team.division === 'Liga 2' ? 'selected' : ''}>Liga 2</option>
+            </select>
+          </div>
+
+          <div class="text-xs space-y-1 pt-1">
+            <div>
+              <span class="font-semibold block mb-1 text-slate-400">Roster Pemain:</span>
+              <div class="flex flex-wrap gap-1">${team.players?.map(p => `<span class="bg-slate-700 border border-slate-600 px-2 py-0.5 rounded text-[11px] text-slate-200">${p}</span>`).join('') || '<span class="text-slate-500">Belum ada pemain</span>'}</div>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function changeTeamDivision(teamId, newDiv) {
+      const team = getTeam(teamId);
+      if (team) {
+        team.division = newDiv;
+        saveState();
+      }
+    }
+
+    function openConfigRulesModal() {
+      document.getElementById('rule-liga1-deg').value = appState.rules?.liga1DegradationSlots ?? 1;
+      document.getElementById('rule-liga2-prom').value = appState.rules?.liga2PromotionSlots ?? 1;
+      document.getElementById('rule-new-pin').value = '';
+      document.getElementById('modal-config-rules').classList.remove('hidden');
+    }
+    function closeConfigRulesModal() { document.getElementById('modal-config-rules').classList.add('hidden'); }
+
+    function saveDivisionRules(e) {
+      e.preventDefault();
+      const deg = parseInt(document.getElementById('rule-liga1-deg').value) || 0;
+      const prom = parseInt(document.getElementById('rule-liga2-prom').value) || 0;
+      const newPin = document.getElementById('rule-new-pin').value.trim();
+
+      appState.rules = { liga1DegradationSlots: deg, liga2PromotionSlots: prom };
+      if (newPin) {
+        appState.adminPin = newPin;
+      }
+      saveState();
+      closeConfigRulesModal();
+      alert(`Aturan & PIN Admin berhasil disimpan!`);
+    }
+
+    function openCreateTournamentModal() {
+      const nextSeason = (appState.seasonNum || 15) + 1;
+      const numInput = document.getElementById('custom-season-num');
+      numInput.value = nextSeason;
+      updateSeasonNamePreview();
+      numInput.oninput = updateSeasonNamePreview;
+      document.getElementById('modal-create-tournament').classList.remove('hidden');
+    }
+    function closeCreateTournamentModal() { document.getElementById('modal-create-tournament').classList.add('hidden'); }
+
+    function updateSeasonNamePreview() {
+      const val = document.getElementById('custom-season-num').value || 16;
+      document.getElementById('season-name-preview').innerText = `ESL Season ${val}`;
+    }
+
+    function toggleTeamModeControls() {
+      const mode = document.querySelector('input[name="team-mode"]:checked').value;
+      const freshControls = document.getElementById('fresh-team-controls');
+      if (mode === 'fresh') freshControls.classList.remove('hidden');
+      else freshControls.classList.add('hidden');
+    }
+
+    function saveCustomTournament(e) {
+      e.preventDefault();
+      const sNum = parseInt(document.getElementById('custom-season-num').value) || 16;
+      const title = `ESL Season ${sNum}`;
+      const l1Deg = parseInt(document.getElementById('custom-liga1-deg').value);
+      const l2Prom = parseInt(document.getElementById('custom-liga2-prom').value);
+      const teamMode = document.querySelector('input[name="team-mode"]:checked').value;
+
+      if (appState.teams && appState.teams.length > 0) {
+        const snapshot = JSON.parse(JSON.stringify(appState));
+        snapshot.archivedAt = new Date().toLocaleString('id-ID');
+        archivesState.unshift(snapshot);
+        saveArchives();
+      }
+
+      let newTeams = [];
+      if (teamMode === 'keep') {
+        newTeams = JSON.parse(JSON.stringify(appState.teams || []));
+      } else {
+        const l1Count = parseInt(document.getElementById('custom-liga1-count').value) || 4;
+        const l2Count = parseInt(document.getElementById('custom-liga2-count').value) || 3;
+        const emojis = ['🔥', '🛡️', '⚡', '🌊', '🎯', '🌩️', '🐅', '🦁', '🦅', '🐺', '🐉', '🦈', '🐻', '⚔️', '👑', '🚀', '💎', '🗿', '🦄', '🐍'];
+
+        for (let i = 1; i <= l1Count; i++) {
+          newTeams.push({
+            id: Date.now() + i,
+            name: `Tim ${i}`,
+            division: "Liga 1",
+            logo: emojis[(i - 1) % emojis.length],
+            players: []
+          });
+        }
+        for (let j = 1; j <= l2Count; j++) {
+          newTeams.push({
+            id: Date.now() + l1Count + j,
+            name: `Tim ${l1Count + j}`,
+            division: "Liga 2",
+            logo: emojis[(l1Count + j - 1) % emojis.length],
+            players: []
+          });
+        }
+      }
+
+      const currentPin = appState.adminPin || "1234";
+      const currentCloudId = appState.cloudSyncId;
+
+      appState = {
+        seasonNum: sNum,
+        tournamentName: title,
+        adminPin: currentPin,
+        cloudSyncId: currentCloudId,
+        rules: { liga1DegradationSlots: l1Deg, liga2PromotionSlots: l2Prom },
+        teams: newTeams,
+        matches: []
+      };
+
+      saveState();
+      closeCreateTournamentModal();
+      alert(`🎉 Selamat! ${title} berhasil dimulai. Season sebelumnya otomatis diarsip.`);
+    }
+
+    function openArchivesModal() {
+      renderArchives();
+      document.getElementById('modal-archives').classList.remove('hidden');
+    }
+    function closeArchivesModal() { document.getElementById('modal-archives').classList.add('hidden'); }
+
+    function renderArchives() {
+      const container = document.getElementById('archives-list-container');
+      container.innerHTML = '';
+
+      if (archivesState.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-10 bg-slate-900/60 border border-slate-700 rounded-xl">
+            <i class="fa-solid fa-box-archive text-4xl text-slate-500 mb-2 block"></i>
+            <p class="text-sm font-semibold text-white">Belum Ada Season Terarsip</p>
+            <p class="text-xs text-slate-400 mt-1">Season aktif akan otomatis tersimpan di sini saat kamu membuat Season Baru.</p>
+          </div>
+        `;
+        return;
+      }
+
+      archivesState.forEach((arc, index) => {
+        const matchCount = arc.matches?.filter(m => m.status === 'finished').length || 0;
+        const totalMatches = arc.matches?.length || 0;
+        const card = document.createElement('div');
+        card.className = "bg-slate-900/80 border border-slate-700 rounded-xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3";
+        card.innerHTML = `
+          <div>
+            <div class="flex items-center gap-2">
+              <h4 class="font-bold text-white text-base">${arc.tournamentName || `ESL Season ${arc.seasonNum}`}</h4>
+              <span class="text-[10px] bg-slate-700 text-slate-300 px-2 py-0.5 rounded font-mono">${arc.archivedAt || 'Diarsip'}</span>
+            </div>
+            <div class="text-xs text-slate-400 mt-1 flex flex-wrap gap-3">
+              <span>👥 ${arc.teams?.length || 0} Tim</span>
+              <span>⚽ ${matchCount} / ${totalMatches} Laga Selesai</span>
+            </div>
+          </div>
+          <div class="flex gap-2 w-full sm:w-auto">
+            <button onclick="requireAdmin(() => restoreArchive(${index}))" class="flex-1 sm:flex-initial px-3 py-1.5 text-xs bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-semibold transition flex items-center justify-center gap-1">
+              <i class="fa-solid fa-box-open"></i> Buka Season Ini
+            </button>
+            <button onclick="requireAdmin(() => deleteArchive(${index}))" class="px-2.5 py-1.5 text-xs border border-slate-700 text-red-400 hover:bg-red-500/10 rounded-lg transition">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function restoreArchive(index) {
+      const arc = archivesState[index];
+      if (!arc) return;
+      if (confirm(`Ganti season aktif saat ini dengan "${arc.tournamentName}"?`)) {
+        if (appState.teams && appState.teams.length > 0) {
+          const currentSnapshot = JSON.parse(JSON.stringify(appState));
+          currentSnapshot.archivedAt = new Date().toLocaleString('id-ID');
+          archivesState.unshift(currentSnapshot);
+        }
+
+        appState = JSON.parse(JSON.stringify(arc));
+        archivesState.splice(index, 1);
+
+        saveArchives();
+        saveState();
+        closeArchivesModal();
+        alert(`📂 ${appState.tournamentName} berhasil dimuat kembali!`);
+      }
+    }
+
+    function deleteArchive(index) {
+      if (confirm("Hapus arsip season ini secara permanen?")) {
+        archivesState.splice(index, 1);
+        saveArchives();
+        renderArchives();
+      }
+    }
+
+    let currentMatchId = null;
+
+    function openMatchModal(matchId) {
+      currentMatchId = matchId;
+      const match = appState.matches.find(m => m.id === matchId);
+      if (!match) return;
+
+      const home = getTeam(match.homeTeamId);
+      const away = getTeam(match.awayTeamId);
+
+      document.getElementById('match-input-id').value = match.id;
+      document.getElementById('match-home-name').innerText = `${home.logo} ${home.name}`;
+      document.getElementById('match-away-name').innerText = `${away.logo} ${away.name}`;
+      document.getElementById('modal-match-div').innerText = match.division || 'Liga 1';
+
+      document.getElementById('match-home-score').value = match.homeScore;
+      document.getElementById('match-away-score').value = match.awayScore;
+      document.getElementById('match-status-select').value = match.status;
+
+      const container = document.getElementById('goals-list-container');
+      container.innerHTML = '';
+      if (match.goals) match.goals.forEach(g => addGoalRow(g.teamId, g.scorer, g.minute, g.type));
+
+      document.getElementById('modal-match-input').classList.remove('hidden');
+    }
+
+    function closeMatchModal() { document.getElementById('modal-match-input').classList.add('hidden'); }
+
+    function addGoalRow(teamId = null, scorer = '', minute = '', type = 'normal') {
+      const matchId = parseInt(document.getElementById('match-input-id').value);
+      const match = appState.matches.find(m => m.id === matchId);
+      if (!match) return;
+
+      const home = getTeam(match.homeTeamId);
+      const away = getTeam(match.awayTeamId);
+      const defaultTeam = teamId || match.homeTeamId;
+
+      const row = document.createElement('div');
+      row.className = "goal-row flex items-center gap-1.5 bg-slate-900/60 p-2 rounded-xl border border-slate-700";
+      row.innerHTML = `
+        <select class="goal-team-select text-xs p-1.5 rounded-lg border border-slate-700 bg-slate-800 text-white outline-none">
+          <option value="${home.id}" ${parseInt(defaultTeam) === home.id ? 'selected' : ''}>${home.name}</option>
+          <option value="${away.id}" ${parseInt(defaultTeam) === away.id ? 'selected' : ''}>${away.name}</option>
+        </select>
+        <input type="text" placeholder="Nama Pemain" value="${scorer}" class="goal-scorer-input flex-1 text-xs p-1.5 rounded-lg border border-slate-700 bg-slate-800 text-white outline-none" required>
+        <input type="text" placeholder="Menit" value="${minute}" class="goal-minute-input w-20 text-xs p-1.5 rounded-lg border border-slate-700 bg-slate-800 text-white outline-none">
+        <select class="goal-type-select text-xs p-1.5 rounded-lg border border-slate-700 bg-slate-800 text-white outline-none">
+          <option value="normal" ${type === 'normal' ? 'selected' : ''}>Normal</option>
+          <option value="penalty" ${type === 'penalty' ? 'selected' : ''}>Penalti</option>
+          <option value="freekick" ${type === 'freekick' ? 'selected' : ''}>Free Kick</option>
+          <option value="og" ${type === 'og' ? 'selected' : ''}>Gol Bunuh Diri (OG)</option>
+        </select>
+        <button type="button" onclick="this.closest('.goal-row').remove();" class="text-red-400 px-1.5 text-xs"><i class="fa-solid fa-xmark"></i></button>
+      `;
+      document.getElementById('goals-list-container').appendChild(row);
+    }
+
+    function saveMatchResult(e) {
+      e.preventDefault();
+      const matchId = parseInt(document.getElementById('match-input-id').value);
+      const match = appState.matches.find(m => m.id === matchId);
+      if (!match) return;
+
+      match.homeScore = parseInt(document.getElementById('match-home-score').value) || 0;
+      match.awayScore = parseInt(document.getElementById('match-away-score').value) || 0;
+      match.status = document.getElementById('match-status-select').value;
+
+      const goals = [];
+      document.querySelectorAll('#goals-list-container .goal-row').forEach(row => {
+        const tId = parseInt(row.querySelector('.goal-team-select').value);
+        const sc = row.querySelector('.goal-scorer-input').value.trim();
+        const mn = row.querySelector('.goal-minute-input').value.trim();
+        const tp = row.querySelector('.goal-type-select').value;
+        if (sc) goals.push({ teamId: tId, scorer: sc, minute: mn, type: tp });
+      });
+      match.goals = goals;
+
+      saveState();
+      closeMatchModal();
+    }
+
+    function deleteMatch(matchId) {
+      if (confirm("Hapus pertandingan ini?")) {
+        appState.matches = appState.matches.filter(m => m.id !== matchId);
+        saveState();
+      }
+    }
+
+    function openAddMatchModal() {
+      if (appState.teams.length < 2) return alert("Minimal 2 tim harus ditambahkan sebelum membuat jadwal!");
+      const homeSelect = document.getElementById('new-match-home');
+      const awaySelect = document.getElementById('new-match-away');
+      homeSelect.innerHTML = ''; awaySelect.innerHTML = '';
+      appState.teams.forEach(t => {
+        homeSelect.innerHTML += `<option value="${t.id}">${t.logo} ${t.name} (${t.division || 'Liga 1'})</option>`;
+        awaySelect.innerHTML += `<option value="${t.id}">${t.logo} ${t.name} (${t.division || 'Liga 1'})</option>`;
+      });
+      if (appState.teams.length >= 2) awaySelect.selectedIndex = 1;
+      document.getElementById('modal-add-match').classList.remove('hidden');
+    }
+    function closeAddMatchModal() { document.getElementById('modal-add-match').classList.add('hidden'); }
+
+    function saveNewMatch(e) {
+      e.preventDefault();
+      const div = document.getElementById('new-match-division').value;
+      const hId = parseInt(document.getElementById('new-match-home').value);
+      const aId = parseInt(document.getElementById('new-match-away').value);
+
+      if (hId === aId) return alert("Tim tidak boleh sama!");
+
+      appState.matches.push({
+        id: Date.now(),
+        division: div,
+        homeTeamId: hId,
+        awayTeamId: aId,
+        homeScore: 0,
+        awayScore: 0,
+        status: 'upcoming',
+        goals: []
+      });
+      saveState();
+      closeAddMatchModal();
+    }
+
+    function generateRoundRobin() {
+      if (appState.teams.length < 2) return alert("Minimal 2 tim harus ditambahkan sebelum memunculkan jadwal!");
+      if (confirm("Generate jadwal Kandang-Tandang untuk semua divisi?")) {
+        ["Liga 1", "Liga 2"].forEach(div => {
+          const teams = appState.teams.filter(t => (t.division || "Liga 1") === div);
+          for (let i = 0; i < teams.length; i++) {
+            for (let j = i + 1; j < teams.length; j++) {
+              appState.matches.push({
+                id: Date.now() + Math.floor(Math.random() * 100000),
+                division: div,
+                homeTeamId: teams[i].id,
+                awayTeamId: teams[j].id,
+                homeScore: 0,
+                awayScore: 0,
+                status: 'upcoming',
+                goals: []
+              });
+              appState.matches.push({
+                id: Date.now() + Math.floor(Math.random() * 100000) + 1,
+                division: div,
+                homeTeamId: teams[j].id,
+                awayTeamId: teams[i].id,
+                homeScore: 0,
+                awayScore: 0,
+                status: 'upcoming',
+                goals: []
+              });
+            }
+          }
+        });
+        saveState();
+      }
+    }
+
+    function openAddTeamModal() {
+      document.getElementById('new-team-name').value = '';
+      document.getElementById('new-team-logo').value = '⚽';
+      document.getElementById('new-team-players').value = '';
+      document.getElementById('modal-add-team').classList.remove('hidden');
+    }
+    function closeAddTeamModal() { document.getElementById('modal-add-team').classList.add('hidden'); }
+
+    function saveNewTeam(e) {
+      e.preventDefault();
+      const name = document.getElementById('new-team-name').value.trim();
+      const div = document.getElementById('new-team-division').value;
+      const logo = document.getElementById('new-team-logo').value.trim() || '⚽';
+      const playersRaw = document.getElementById('new-team-players').value;
+      const players = playersRaw.split(',').map(p => p.trim()).filter(p => p.length > 0);
+
+      if (!name) return;
+
+      appState.teams.push({
+        id: Date.now(),
+        name,
+        division: div,
+        logo,
+        players
+      });
+      saveState();
+      closeAddTeamModal();
+    }
+
+    function deleteTeam(id) {
+      if (confirm("Hapus tim ini?")) {
+        appState.teams = appState.teams.filter(t => t.id !== id);
+        appState.matches = appState.matches.filter(m => m.homeTeamId !== id && m.awayTeamId !== id);
+        saveState();
+      }
+    }
+
+    // =============================================
+    // PASTE HASIL PERTANDINGAN - SMART TEXT PARSER
+    // =============================================
+
+    function openPasteModal() {
+      document.getElementById('paste-text-input').value = '';
+      document.getElementById('paste-preview').classList.add('hidden');
+      document.getElementById('modal-paste').classList.remove('hidden');
+    }
+    function closePasteModal() { document.getElementById('modal-paste').classList.add('hidden'); }
+
+    function parseMinuteNum(minStr) {
+      if (!minStr) return 999;
+      const clean = minStr.toString().trim();
+      if (clean.includes('+')) {
+        const parts = clean.split('+');
+        const base = parseInt(parts[0]) || 0;
+        const extra = parseInt(parts[1]) || 0;
+        return base + extra;
+      }
+      const num = parseInt(clean);
+      return isNaN(num) ? 999 : num;
+    }
+
+    const IGNORED_SUFFIXES = ['fc', 'sc', 'sport', 'united', 'city', 'club'];
+
+    function findTeamByInitials(initials) {
+      const lower = initials.toLowerCase().trim();
+      if (!lower) return null;
+
+      let bestTeam = null;
+      let bestScore = 999;
+
+      for (const team of appState.teams) {
+        const words = team.name.split(/\s+/);
+        const firstLetters = words.map(w => w[0]).join('').toLowerCase();
+        const meaningful = words.filter(w => !IGNORED_SUFFIXES.includes(w.toLowerCase()));
+        const meaningfulInitials = meaningful.map(w => w[0]).join('').toLowerCase();
+        const firstWord = words[0].toLowerCase();
+
+        if (firstLetters === lower && bestScore > 1) {
+          bestTeam = team; bestScore = 1;
+        }
+        if (meaningfulInitials === lower && bestScore > 2) {
+          bestTeam = team; bestScore = 2;
+        }
+        if (firstWord.startsWith(lower) && lower.length >= 2 && bestScore > 3) {
+          bestTeam = team; bestScore = 3;
+        }
+        if (team.name.toLowerCase().replace(/\s+/g, '').startsWith(lower) && bestScore > 4) {
+          bestTeam = team; bestScore = 4;
+        }
+        for (const w of words) {
+          if (w.toLowerCase().startsWith(lower) && lower.length >= 2 && bestScore > 5) {
+            bestTeam = team; bestScore = 5;
+          }
+        }
+      }
+
+      return bestTeam;
+    }
+
+    function findTeamByName(name) {
+      const lower = name.toLowerCase().trim();
+      for (const team of appState.teams) {
+        if (team.name.toLowerCase() === lower) return team;
+      }
+      for (const team of appState.teams) {
+        if (team.name.toLowerCase().includes(lower) || lower.includes(team.name.toLowerCase())) return team;
+      }
+      return null;
+    }
+
+    function parsePasteText(text) {
+      if (!text || !text.trim()) return { error: "Teks kosong!" };
+
+      const scoreMatch = text.match(/(\d+)\s*[-–]\s*(\d+)/);
+      if (!scoreMatch) {
+        return { error: `Tidak ditemukan skor pertandingan! Format skor harus "[skor]-[skor]", contoh: "4-3" atau "11-3".` };
+      }
+
+      const scoreIndex = scoreMatch.index;
+      const homeScore = parseInt(scoreMatch[1]);
+      const awayScore = parseInt(scoreMatch[2]);
+
+      const textBeforeScore = text.substring(0, scoreIndex).trim();
+      const textAfterScore = text.substring(scoreIndex + scoreMatch[0].length).trim();
+
+      const homeTeam = findTeamByName(textBeforeScore) || findTeamByInitials(textBeforeScore);
+      if (!homeTeam) {
+        return { error: `Tim Kandang sebelum skor "${scoreMatch[0]}" tidak ditemukan!\nTeks sebelum skor: "${textBeforeScore}"` };
+      }
+
+      let awayTeam = null;
+      let awayTeamMatchLength = 0;
+
+      for (const team of appState.teams) {
+        if (team.id === homeTeam.id) continue;
+        const lowerName = team.name.toLowerCase();
+        const lowerAfter = textAfterScore.toLowerCase();
+
+        if (lowerAfter.startsWith(lowerName)) {
+          if (lowerName.length > awayTeamMatchLength) {
+            awayTeam = team;
+            awayTeamMatchLength = lowerName.length;
+          }
+        }
+        const firstWord = lowerName.split(/\s+/)[0];
+        if (!awayTeam && lowerAfter.startsWith(firstWord) && firstWord.length >= 3) {
+          if (firstWord.length > awayTeamMatchLength) {
+            awayTeam = team;
+            awayTeamMatchLength = firstWord.length;
+          }
+        }
+      }
+
+      if (!awayTeam) {
+        const afterWords = textAfterScore.split(/\s+/);
+        for (let i = Math.min(4, afterWords.length); i >= 1; i--) {
+          const candidate = afterWords.slice(0, i).join(' ');
+          const found = findTeamByName(candidate) || findTeamByInitials(candidate);
+          if (found && found.id !== homeTeam.id) {
+            awayTeam = found;
+            awayTeamMatchLength = candidate.length;
+            break;
+          }
+        }
+      }
+
+      if (!awayTeam) {
+        return { error: `Tim Tandang setelah skor "${scoreMatch[0]}" tidak ditemukan!\nTeks setelah skor: "${textAfterScore.substring(0, 30)}..."` };
+      }
+
+      const goalText = textAfterScore.substring(awayTeamMatchLength).trim();
+
+      const goals = [];
+      const warnings = [];
+
+      if (goalText) {
+        const rawTokens = goalText.split(/\s+/).filter(t => t.length > 0);
+        let currentTokens = [];
+
+        for (let idx = 0; idx < rawTokens.length; idx++) {
+          const token = rawTokens[idx];
+          currentTokens.push(token);
+
+          const cleanToken = token.replace(/[,.;]$/, '').toLowerCase();
+          const targetTeam = findTeamByInitials(cleanToken);
+
+          if (targetTeam) {
+            currentTokens.pop();
+            if (currentTokens.length > 0) {
+              parseGoalEntryTokens(currentTokens, targetTeam, goals);
+              currentTokens = [];
+            }
+          }
+        }
+      }
+
+      const sortedGoals = goals.sort((a, b) => parseMinuteNum(a.minute) - parseMinuteNum(b.minute));
+
+      return {
+        homeTeam,
+        awayTeam,
+        homeScore,
+        awayScore,
+        goals: sortedGoals,
+        warnings
+      };
+    }
+
+    function parseGoalEntryTokens(tokens, goalTeam, goalsList) {
+      if (tokens.length === 0) return;
+
+      let playerTokens = [];
+      let playerTypeFlag = 'normal';
+
+      let i = 0;
+      while (i < tokens.length) {
+        const tok = tokens[i].replace(/'/g, '');
+        if (/^\d/.test(tok) || /^[\d+,]+$/.test(tok)) {
+          break;
+        }
+        const typeMatch = tok.match(/\((og|pk|p|fk)\)/i);
+        if (typeMatch) {
+          const typeStr = typeMatch[1].toLowerCase();
+          if (typeStr === 'og') playerTypeFlag = 'og';
+          else if (typeStr === 'pk' || typeStr === 'p') playerTypeFlag = 'penalty';
+          else if (typeStr === 'fk') playerTypeFlag = 'freekick';
+          i++;
+          continue;
+        }
+        playerTokens.push(tokens[i]);
+        i++;
+      }
+
+      const playerName = playerTokens.join(' ').replace(/[,;]$/, '').trim();
+      if (!playerName) return;
+
+      const remainingTokens = tokens.slice(i);
+      const minutesRawStr = remainingTokens.join(' ').replace(/'/g, '');
+      const minuteParts = minutesRawStr.split(/[\s,]+/).filter(m => m.trim().length > 0);
+
+      let currentMinuteType = playerTypeFlag;
+
+      if (minuteParts.length === 0) {
+        goalsList.push({
+          teamId: goalTeam.id,
+          teamName: goalTeam.name,
+          scorer: playerName,
+          minute: '',
+          type: playerTypeFlag
+        });
+      } else {
+        minuteParts.forEach(part => {
+          let cleanMin = part.trim();
+          let itemType = currentMinuteType;
+
+          if (/^\(?(og)\)?$/i.test(cleanMin)) {
+            currentMinuteType = 'og';
+            return;
+          }
+          if (/^\(?(pk|p)\)?$/i.test(cleanMin)) {
+            currentMinuteType = 'penalty';
+            return;
+          }
+          if (/^\(?(fk)\)?$/i.test(cleanMin)) {
+            currentMinuteType = 'freekick';
+            return;
+          }
+
+          if (/\(?(og)\)?$/i.test(cleanMin)) {
+            itemType = 'og';
+            cleanMin = cleanMin.replace(/\(?(og)\)?$/i, '').trim();
+          } else if (/\(?(pk|p)\)?$/i.test(cleanMin) && !/\+/.test(cleanMin)) {
+            itemType = 'penalty';
+            cleanMin = cleanMin.replace(/\(?(pk|p)\)?$/i, '').trim();
+          } else if (/\(?(fk)\)?$/i.test(cleanMin)) {
+            itemType = 'freekick';
+            cleanMin = cleanMin.replace(/\(?(fk)\)?$/i, '').trim();
+          }
+
+          if (/^\d/.test(cleanMin)) {
+            goalsList.push({
+              teamId: goalTeam.id,
+              teamName: goalTeam.name,
+              scorer: playerName,
+              minute: cleanMin,
+              type: itemType
+            });
+            currentMinuteType = playerTypeFlag;
+          }
+        });
+      }
+    }
+
+    let lastParsedResult = null;
+
+    function previewPaste() {
+      const text = document.getElementById('paste-text-input').value;
+      if (!text.trim()) return alert("Ketik atau paste teks hasil pertandingan terlebih dahulu!");
+
+      const result = parsePasteText(text);
+      const previewDiv = document.getElementById('paste-preview');
+      const contentDiv = document.getElementById('paste-preview-content');
+
+      if (result.error) {
+        previewDiv.classList.remove('hidden');
+        contentDiv.innerHTML = `<div class="text-red-400 font-semibold">❌ Error: ${result.error.replace(/\n/g, '<br>')}</div>`;
+        lastParsedResult = null;
+        return;
+      }
+
+      lastParsedResult = result;
+
+      const goalTypeLabel = (t) => t === 'og' ? ' (OG)' : t === 'penalty' ? ' (PK)' : t === 'freekick' ? ' (FK)' : '';
+
+      let html = `
+        <div class="flex items-center justify-between p-3 bg-slate-800 rounded-lg border border-slate-600 mb-3">
+          <div class="text-center flex-1">
+            <div class="text-lg">${result.homeTeam.logo}</div>
+            <div class="font-bold text-xs text-white">${result.homeTeam.name}</div>
+          </div>
+          <div class="px-3 text-center">
+            <span class="text-2xl font-black text-white">${result.homeScore}</span>
+            <span class="text-slate-500 mx-1">:</span>
+            <span class="text-2xl font-black text-white">${result.awayScore}</span>
+          </div>
+          <div class="text-center flex-1">
+            <div class="text-lg">${result.awayTeam.logo}</div>
+            <div class="font-bold text-xs text-white">${result.awayTeam.name}</div>
+          </div>
+        </div>
+      `;
+
+      if (result.goals.length > 0) {
+        html += `<div class="text-xs font-semibold text-slate-400 mb-2">⚽ ${result.goals.length} Gol:</div>`;
+        result.goals.forEach(g => {
+          html += `<div class="flex items-center gap-2 text-xs text-slate-300 py-1">
+            <span>⚽</span>
+            <span class="font-medium text-white">${g.scorer}${goalTypeLabel(g.type)}</span>
+            <span class="text-slate-400">(${g.teamName})</span>
+            ${g.minute ? `<span class="ml-auto font-mono bg-slate-700 px-1.5 py-0.5 rounded">${g.minute}'</span>` : ''}
+          </div>`;
+        });
+      }
+
+      if (result.warnings && result.warnings.length > 0) {
+        html += `<div class="mt-3 pt-2 border-t border-slate-700">`;
+        result.warnings.forEach(w => {
+          html += `<div class="text-amber-400 text-xs">⚠️ ${w.error}</div>`;
+        });
+        html += `</div>`;
+      }
+
+      html += `<div class="mt-3 pt-2 border-t border-slate-700 text-xs text-emerald-400 font-semibold">✅ Siap disimpan! Klik "Simpan ke Sistem".</div>`;
+
+      previewDiv.classList.remove('hidden');
+      contentDiv.innerHTML = html;
+    }
+
+    function submitPaste() {
+      const text = document.getElementById('paste-text-input').value;
+      if (!text.trim()) return alert("Ketik atau paste teks hasil pertandingan terlebih dahulu!");
+
+      if (!lastParsedResult) {
+        const result = parsePasteText(text);
+        if (result.error) return alert("❌ " + result.error);
+        lastParsedResult = result;
+      }
+
+      const r = lastParsedResult;
+      const division = document.getElementById('paste-division').value;
+
+      let existingMatch = appState.matches.find(m => 
+        m.homeTeamId === r.homeTeam.id && m.awayTeamId === r.awayTeam.id && m.status === 'upcoming'
+      );
+
+      if (existingMatch) {
+        existingMatch.homeScore = r.homeScore;
+        existingMatch.awayScore = r.awayScore;
+        existingMatch.status = 'finished';
+        existingMatch.goals = r.goals.map(g => ({
+          teamId: g.teamId,
+          scorer: g.scorer,
+          minute: g.minute,
+          type: g.type
+        }));
+      } else {
+        appState.matches.push({
+          id: Date.now(),
+          division: division,
+          homeTeamId: r.homeTeam.id,
+          awayTeamId: r.awayTeam.id,
+          homeScore: r.homeScore,
+          awayScore: r.awayScore,
+          status: 'finished',
+          goals: r.goals.map(g => ({
+            teamId: g.teamId,
+            scorer: g.scorer,
+            minute: g.minute,
+            type: g.type
+          }))
+        });
+      }
+
+      saveState();
+      lastParsedResult = null;
+      closePasteModal();
+      alert(`✅ Pertandingan ${r.homeTeam.name} ${r.homeScore}-${r.awayScore} ${r.awayTeam.name} berhasil disimpan!`);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadFromCloudIfAvailable();
+      switchTab('matches');
+    });
+  </script>
+</body>
+</html>
