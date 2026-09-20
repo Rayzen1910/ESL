@@ -549,6 +549,13 @@
           </select>
         </div>
         <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Status Tim</label>
+          <select id="new-team-status" class="w-full p-2.5 rounded-lg border border-slate-700 bg-slate-900 text-white text-sm outline-none">
+            <option value="active">🟢 Aktif (Masuk Klasemen & Liga)</option>
+            <option value="inactive">📦 Nonaktif / Disimpan (Luar Liga)</option>
+          </select>
+        </div>
+        <div>
           <label class="block text-xs font-semibold text-slate-400 mb-1">Logo (Emoji / Symbol)</label>
           <input type="text" id="new-team-logo" value="⚽" required class="w-full p-2.5 rounded-lg border border-slate-700 bg-slate-900 text-white text-sm outline-none">
         </div>
@@ -931,7 +938,7 @@ Baris 2+: [Pemain] [menit](p/og/fk) [inisial tim]" class="w-full p-3 rounded-lg 
       if (!tbody) return;
       tbody.innerHTML = '';
 
-      const teamsInDiv = appState.teams.filter(t => (t.division || "Liga 1") === divName);
+      const teamsInDiv = appState.teams.filter(t => (t.division || "Liga 1") === divName && t.status !== 'inactive');
       if (teamsInDiv.length === 0) {
         tbody.innerHTML = `<tr><td colspan="11" class="text-center py-6 text-xs text-slate-400">Belum ada tim di divisi ini.</td></tr>`;
         return;
@@ -1068,26 +1075,45 @@ Baris 2+: [Pemain] [menit](p/og/fk) [inisial tim]" class="w-full p-3 rounded-lg 
       }
 
       appState.teams.forEach(team => {
+        const isInactive = team.status === 'inactive';
         const card = document.createElement('div');
-        card.className = "bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow space-y-3";
+        card.className = `bg-slate-800 border ${isInactive ? 'border-slate-700/50 opacity-80' : 'border-slate-700'} rounded-2xl p-5 shadow space-y-3`;
         card.innerHTML = `
           <div class="flex justify-between items-start">
             <div class="flex items-center gap-3">
               <span class="text-3xl">${team.logo}</span>
               <div>
                 <h3 class="font-bold text-white text-base leading-tight">${team.name}</h3>
-                <span class="text-xs text-blue-400 font-semibold">${team.division || 'Liga 1'}</span>
+                <div class="flex items-center gap-2 mt-1">
+                  <span class="text-xs text-blue-400 font-semibold">${team.division || 'Liga 1'}</span>
+                  ${isInactive 
+                    ? '<span class="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold px-2 py-0.5 rounded-full"><i class="fa-solid fa-box-archive"></i> Nonaktif (Disimpan)</span>'
+                    : '<span class="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold px-2 py-0.5 rounded-full"><i class="fa-solid fa-circle-check"></i> Aktif di Liga</span>'
+                  }
+                </div>
               </div>
             </div>
-            <button onclick="requireAdmin(() => deleteTeam(${team.id}))" class="text-red-400 hover:text-red-300 text-xs p-1"><i class="fa-solid fa-trash"></i></button>
+            <button onclick="requireAdmin(() => deleteTeam(${team.id}))" class="text-red-400 hover:text-red-300 text-xs p-1" title="Hapus Permanent"><i class="fa-solid fa-trash"></i></button>
           </div>
 
-          <div class="flex items-center gap-2 pt-2 border-t border-slate-700">
-            <span class="text-xs text-slate-400">Pindah Divisi:</span>
-            <select onchange="requireAdmin(() => changeTeamDivision(${team.id}, this.value))" class="text-xs p-1 rounded border border-slate-700 bg-slate-900 text-white">
-              <option value="Liga 1" ${team.division === 'Liga 1' ? 'selected' : ''}>Liga 1</option>
-              <option value="Liga 2" ${team.division === 'Liga 2' ? 'selected' : ''}>Liga 2</option>
-            </select>
+          <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-700">
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs text-slate-400">Divisi:</span>
+              <select onchange="requireAdmin(() => changeTeamDivision(${team.id}, this.value))" class="text-xs p-1 rounded border border-slate-700 bg-slate-900 text-white outline-none">
+                <option value="Liga 1" ${team.division === 'Liga 1' ? 'selected' : ''}>Liga 1</option>
+                <option value="Liga 2" ${team.division === 'Liga 2' ? 'selected' : ''}>Liga 2</option>
+              </select>
+            </div>
+            <button onclick="requireAdmin(() => toggleTeamStatus(${team.id}))" class="px-2.5 py-1 text-xs rounded-lg font-semibold transition flex items-center gap-1.5 ${
+              isInactive 
+                ? 'bg-emerald-600/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-600/30' 
+                : 'bg-amber-600/20 text-amber-300 border border-amber-500/30 hover:bg-amber-600/30'
+            }">
+              ${isInactive 
+                ? '<i class="fa-solid fa-circle-play text-emerald-400"></i> Aktifkan ke Liga' 
+                : '<i class="fa-solid fa-box-archive text-amber-400"></i> Simpan (Nonaktifkan)'
+              }
+            </button>
           </div>
 
           <div class="text-xs space-y-1 pt-1">
@@ -1099,6 +1125,15 @@ Baris 2+: [Pemain] [menit](p/og/fk) [inisial tim]" class="w-full p-3 rounded-lg 
         `;
         container.appendChild(card);
       });
+    }
+
+    function toggleTeamStatus(teamId) {
+      const team = getTeam(teamId);
+      if (team && team.id) {
+        team.status = (team.status === 'inactive') ? 'active' : 'inactive';
+        saveState();
+        renderAll();
+      }
     }
 
     function changeTeamDivision(teamId, newDiv) {
@@ -1418,10 +1453,11 @@ Baris 2+: [Pemain] [menit](p/og/fk) [inisial tim]" class="w-full p-3 rounded-lg 
     }
 
     function generateRoundRobin() {
-      if (appState.teams.length < 2) return alert("Minimal 2 tim harus ditambahkan sebelum memunculkan jadwal!");
-      if (confirm("Generate jadwal Kandang-Tandang untuk semua divisi?")) {
+      const activeTeams = appState.teams.filter(t => t.status !== 'inactive');
+      if (activeTeams.length < 2) return alert("Minimal 2 tim aktif harus ditambahkan sebelum memunculkan jadwal!");
+      if (confirm("Generate jadwal Kandang-Tandang untuk semua divisi (hanya tim aktif)?")) {
         ["Liga 1", "Liga 2"].forEach(div => {
-          const teams = appState.teams.filter(t => (t.division || "Liga 1") === div);
+          const teams = appState.teams.filter(t => (t.division || "Liga 1") === div && t.status !== 'inactive');
           for (let i = 0; i < teams.length; i++) {
             for (let j = i + 1; j < teams.length; j++) {
               appState.matches.push({
@@ -1455,6 +1491,7 @@ Baris 2+: [Pemain] [menit](p/og/fk) [inisial tim]" class="w-full p-3 rounded-lg 
       document.getElementById('new-team-name').value = '';
       document.getElementById('new-team-logo').value = '⚽';
       document.getElementById('new-team-players').value = '';
+      document.getElementById('new-team-status').value = 'active';
       document.getElementById('modal-add-team').classList.remove('hidden');
     }
     function closeAddTeamModal() { document.getElementById('modal-add-team').classList.add('hidden'); }
@@ -1463,6 +1500,7 @@ Baris 2+: [Pemain] [menit](p/og/fk) [inisial tim]" class="w-full p-3 rounded-lg 
       e.preventDefault();
       const name = document.getElementById('new-team-name').value.trim();
       const div = document.getElementById('new-team-division').value;
+      const status = document.getElementById('new-team-status').value || 'active';
       const logo = document.getElementById('new-team-logo').value.trim() || '⚽';
       const playersRaw = document.getElementById('new-team-players').value;
       const players = playersRaw.split(',').map(p => p.trim()).filter(p => p.length > 0);
@@ -1473,6 +1511,7 @@ Baris 2+: [Pemain] [menit](p/og/fk) [inisial tim]" class="w-full p-3 rounded-lg 
         id: Date.now(),
         name,
         division: div,
+        status,
         logo,
         players
       });
