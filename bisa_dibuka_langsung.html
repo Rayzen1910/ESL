@@ -50,10 +50,10 @@
           <i class="fa-solid fa-sliders"></i> Aturan Slot
         </button>
 
-        <!-- Admin Only Actions -->
-        <button onclick="syncToCloud()" class="admin-strict-only px-3 py-2 text-xs md:text-sm font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow transition flex items-center gap-1.5">
-          <i class="fa-solid fa-cloud-arrow-up"></i> Sync Online
-        </button>
+        <!-- Auto-Sync Status Indicator -->
+        <span id="cloud-sync-status" class="text-xs bg-slate-800 text-emerald-400 border border-emerald-500/20 font-bold px-3 py-2 rounded-lg flex items-center gap-1.5 shadow" title="Semua data tersimpan otomatis di HP/Laptop & Cloud Online">
+          <i class="fa-solid fa-cloud-check"></i> Auto-Sync Online
+        </span>
         <button onclick="logoutAdmin()" class="admin-strict-only px-3 py-2 text-xs md:text-sm font-semibold rounded-lg bg-rose-600/20 text-rose-300 border border-rose-500/30 hover:bg-rose-600/30 transition flex items-center gap-1.5">
           <i class="fa-solid fa-right-from-bracket"></i> Logout Admin
         </button>
@@ -704,9 +704,22 @@ Baris 2+: [Pemain] [menit](p/og/fk) [inisial tim]" class="w-full p-3 rounded-lg 
       alert("👁️ Keluar dari Mode Admin. Sekarang dalam Mode Penonton.");
     }
 
-    // Cloud Sync API (using RESTful API Endpoint)
-    async function syncToCloud() {
-      if (!isAdmin) return;
+    // Silent Cloud Auto-Sync API (No alert popups)
+    let autoSyncTimer = null;
+
+    function saveState() {
+      localStorage.setItem('esl_100percent_empty_state', JSON.stringify(appState));
+      renderAll();
+
+      clearTimeout(autoSyncTimer);
+      autoSyncTimer = setTimeout(() => {
+        syncToCloudSilent();
+      }, 500);
+    }
+
+    async function syncToCloudSilent() {
+      const statusEl = document.getElementById('cloud-sync-status');
+      if (statusEl) statusEl.innerHTML = `<i class="fa-solid fa-arrows-rotate fa-spin text-blue-400"></i> Auto-Syncing...`;
 
       try {
         let cloudId = appState.cloudSyncId;
@@ -733,19 +746,18 @@ Baris 2+: [Pemain] [menit](p/og/fk) [inisial tim]" class="w-full p-3 rounded-lg 
             const resData = await res.json();
             if (resData && resData.id) {
               appState.cloudSyncId = resData.id;
-              saveState();
+              localStorage.setItem('esl_100percent_empty_state', JSON.stringify(appState));
               success = true;
             }
           }
         }
 
-        if (success) {
-          alert(`✅ Data berhasil di-sync ke Cloud Online! Penonton di HP/Laptop lain otomatis dapat melihat klasemen & hasil terbaru.`);
-        } else {
-          alert(`⚠️ Gagal menyambung ke server cloud. Pastikan terkoneksi ke internet.`);
+        if (statusEl) {
+          if (success) statusEl.innerHTML = `<i class="fa-solid fa-cloud-check text-emerald-400"></i> Auto-Sync Online`;
+          else statusEl.innerHTML = `<i class="fa-solid fa-hard-drive text-amber-400"></i> Tersimpan (Lokal)`;
         }
       } catch(err) {
-        alert(`⚠️ Gagal menyambung ke server cloud. Pastikan terkoneksi ke internet.`);
+        if (statusEl) statusEl.innerHTML = `<i class="fa-solid fa-hard-drive text-amber-400"></i> Tersimpan (Lokal)`;
       }
     }
 
@@ -782,10 +794,7 @@ Baris 2+: [Pemain] [menit](p/og/fk) [inisial tim]" class="w-full p-3 rounded-lg 
       return JSON.parse(JSON.stringify(totallyEmptyState));
     }
 
-    function saveState() {
-      localStorage.setItem('esl_100percent_empty_state', JSON.stringify(appState));
-      renderAll();
-    }
+
 
     function loadArchives() {
       const saved = localStorage.getItem('esl_season_archives');
